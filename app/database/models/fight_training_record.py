@@ -1,0 +1,65 @@
+from datetime import date
+from uuid import UUID
+
+from sqlalchemy import Boolean, Date, Float, ForeignKey, Integer, String, Uuid
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.database.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+
+
+class FightTrainingRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "fight_training_records"
+
+    fight_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("fights.id", ondelete="CASCADE"), unique=True)
+    event_date: Mapped[date] = mapped_column(Date, index=True)
+    fighter_a_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("fighters.id"), index=True)
+    fighter_b_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("fighters.id"), index=True)
+    weight_class: Mapped[str] = mapped_column(String(50), index=True)
+    scheduled_rounds: Mapped[int] = mapped_column(Integer)
+    a_fights_completed: Mapped[int] = mapped_column(Integer)
+    b_fights_completed: Mapped[int] = mapped_column(Integer)
+    experience_difference: Mapped[float] = mapped_column(Float)
+    a_age: Mapped[float | None] = mapped_column(Float)
+    b_age: Mapped[float | None] = mapped_column(Float)
+    age_difference: Mapped[float | None] = mapped_column(Float)
+    age_missing: Mapped[bool] = mapped_column(Boolean)
+    a_height: Mapped[float | None] = mapped_column(Float)
+    b_height: Mapped[float | None] = mapped_column(Float)
+    height_difference: Mapped[float | None] = mapped_column(Float)
+    height_missing: Mapped[bool] = mapped_column(Boolean)
+    a_reach: Mapped[float | None] = mapped_column(Float)
+    b_reach: Mapped[float | None] = mapped_column(Float)
+    reach_difference: Mapped[float | None] = mapped_column(Float)
+    reach_missing: Mapped[bool] = mapped_column(Boolean)
+    a_elo_rating: Mapped[float] = mapped_column(Float)
+    b_elo_rating: Mapped[float] = mapped_column(Float)
+    elo_difference: Mapped[float] = mapped_column(Float)
+    a_striking_score: Mapped[float] = mapped_column(Float)
+    b_striking_score: Mapped[float] = mapped_column(Float)
+    striking_difference: Mapped[float] = mapped_column(Float)
+    a_grappling_score: Mapped[float] = mapped_column(Float)
+    b_grappling_score: Mapped[float] = mapped_column(Float)
+    grappling_difference: Mapped[float] = mapped_column(Float)
+    a_defence_score: Mapped[float] = mapped_column(Float)
+    b_defence_score: Mapped[float] = mapped_column(Float)
+    defence_difference: Mapped[float] = mapped_column(Float)
+    a_performance_score: Mapped[float] = mapped_column(Float)
+    b_performance_score: Mapped[float] = mapped_column(Float)
+    performance_difference: Mapped[float] = mapped_column(Float)
+    a_recent_form_score: Mapped[float] = mapped_column(Float)
+    b_recent_form_score: Mapped[float] = mapped_column(Float)
+    recent_form_difference: Mapped[float] = mapped_column(Float)
+    a_strength_of_schedule: Mapped[float] = mapped_column(Float)
+    b_strength_of_schedule: Mapped[float] = mapped_column(Float)
+    strength_of_schedule_difference: Mapped[float] = mapped_column(Float)
+    a_finish_rate: Mapped[float] = mapped_column(Float)
+    b_finish_rate: Mapped[float] = mapped_column(Float)
+    finish_rate_difference: Mapped[float] = mapped_column(Float)
+    a_days_since_last_fight: Mapped[int | None] = mapped_column(Integer)
+    b_days_since_last_fight: Mapped[int | None] = mapped_column(Integer)
+    layoff_difference: Mapped[float | None] = mapped_column(Float)
+    layoff_missing: Mapped[bool] = mapped_column(Boolean)
+    a_data_quality_score: Mapped[float] = mapped_column(Float)
+    b_data_quality_score: Mapped[float] = mapped_column(Float)
+    minimum_data_quality: Mapped[float] = mapped_column(Float, index=True)
+    fighter_a_win: Mapped[bool] = mapped_column(Boolean)
