@@ -1,3 +1,4 @@
+import logging
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
@@ -8,9 +9,15 @@ from app.database import models  # noqa: F401
 from app.database.base import Base
 
 config = context.config
-config.set_main_option("sqlalchemy.url", get_settings().database_url.replace("%", "%%"))
 if config.config_file_name:
     fileConfig(config.config_file_name)
+logger = logging.getLogger("alembic.env")
+
+# Settings reads DATABASE_URL and normalises Render's postgres:// (and the
+# driver-less postgresql:// form) to SQLAlchemy's psycopg2 URL. Escape percent
+# signs because Alembic's Config uses interpolation internally.
+database_url = get_settings().database_url
+config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 target_metadata = Base.metadata
 
 
@@ -21,6 +28,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    logger.info("Running database migrations using configured DATABASE_URL")
     connectable = engine_from_config(
         config.get_section(config.config_ini_section) or {},
         prefix="sqlalchemy.",
@@ -30,6 +38,7 @@ def run_migrations_online() -> None:
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()
+    logger.info("Database migrations completed successfully")
 
 
 run_migrations_offline() if context.is_offline_mode() else run_migrations_online()
