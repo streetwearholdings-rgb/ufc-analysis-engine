@@ -22,7 +22,7 @@ def health(db: DatabaseSession) -> HealthResponse:
     try:
         db.execute(text("SELECT 1"))
     except SQLAlchemyError as exc:
-        logger.exception("health_check_database_unavailable")
+        logger.error("health_check_database_unavailable error_type=%s", type(exc).__name__)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database unavailable",

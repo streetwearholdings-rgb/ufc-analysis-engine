@@ -1,7 +1,9 @@
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.calculations import router as calculations_router
 from app.api.context import admin_router as context_admin_router
@@ -18,6 +20,25 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 app = FastAPI(title="UFC Analysis Engine", version=settings.model_version)
+
+
+@app.exception_handler(SQLAlchemyError)
+async def database_exception_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
+    logging.getLogger(__name__).error(
+        "database_operation_failed method=%s path=%s error_type=%s",
+        request.method,
+        request.url.path,
+        type(exc).__name__,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "database_error",
+            "message": "The analysis service could not complete the database operation.",
+        },
+    )
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allowed_origins,

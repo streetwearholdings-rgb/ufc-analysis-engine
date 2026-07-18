@@ -11,16 +11,16 @@ depends_on: Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.create_unique_constraint(
-        "uq_context_signal_sources_context_signal_id",
-        "context_signal_sources",
-        ["context_signal_id", "context_source_id"],
-    )
+    with op.batch_alter_table("context_signal_sources") as batch_op:
+        batch_op.create_unique_constraint(
+            "uq_context_signal_sources_context_signal_id",
+            ["context_signal_id", "context_source_id"],
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "uq_context_signal_sources_context_signal_id",
-        "context_signal_sources",
-        type_="unique",
-    )
+    with op.batch_alter_table("context_signal_sources") as batch_op:
+        batch_op.drop_constraint(
+            "uq_context_signal_sources_context_signal_id",
+            type_="unique",
+        )

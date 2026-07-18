@@ -235,11 +235,12 @@ The root [Render Blueprint](render.yaml) creates the `ufc-analysis-api` Docker w
    - `CORS_ORIGINS`: a JSON array or comma-separated list of allowed browser origins, such as `https://app.example.com`.
    - `ODDS_API_KEY`: required only when live odds ingestion is used.
 5. Apply the Blueprint and deploy. Automatic deployments track `main`.
-6. Render runs `alembic upgrade head` as the pre-deploy migration command. Confirm it succeeds in the deploy logs; if an operator must rerun it, open the service Shell and run `alembic upgrade head`.
+6. Allow Render to redeploy after the changes reach GitHub. The free-tier-compatible container startup script runs `alembic upgrade head` automatically before Uvicorn; no Render Shell or paid pre-deploy command is required. Confirm the deploy logs contain `Applying database migrations`, the Alembic revision upgrades, and `Database migrations completed successfully`.
 7. Verify `https://YOUR-SERVICE.onrender.com/health` returns `{"status":"ok","database":"ok"}`.
-8. Verify interactive API documentation at `https://YOUR-SERVICE.onrender.com/docs` and OpenAPI at `/openapi.json`.
+8. Open `https://YOUR-SERVICE.onrender.com/docs` and test the endpoint that previously failed. Database exceptions now return a stable `database_error` response without exposing connection details.
+9. Verify OpenAPI is available at `https://YOUR-SERVICE.onrender.com/openapi.json`.
 
-The production container runs Python 3.12 as a non-root user, binds Uvicorn to `0.0.0.0:$PORT`, disables reload, honors forwarded proxy headers, logs to stdout/stderr, and checks the dynamically assigned port. `APP_ENV=production` validates that a non-local `DATABASE_URL` and `API_KEY` are configured before startup. Database health failures return HTTP 503 without exposing connection details.
+The production container runs Python 3.12 as a non-root user, applies all pending migrations with five bounded attempts for temporary PostgreSQL startup failures, then binds Uvicorn to `0.0.0.0:$PORT`. It disables reload, honors forwarded proxy headers, logs to stdout/stderr, and checks the dynamically assigned port. Migration errors remain visible and prevent the server from starting after the retry limit. `APP_ENV=production` validates that a non-local `DATABASE_URL` and `API_KEY` are configured before startup. Database health failures return HTTP 503 without exposing connection details.
 
 Local production-image verification:
 
