@@ -240,6 +240,8 @@ The root [Render Blueprint](render.yaml) creates the `ufc-analysis-api` Docker w
 8. Open `https://YOUR-SERVICE.onrender.com/docs` and test the endpoint that previously failed. Database exceptions now return a stable `database_error` response without exposing connection details.
 9. Verify OpenAPI is available at `https://YOUR-SERVICE.onrender.com/openapi.json`.
 
+If the Render service was previously given a **Docker Command** override, clear that field completely before redeploying. Render must use the image command, `CMD ["/app/start.sh"]`; do not paste a quoted `alembic ... && uvicorn ...` command into the override field.
+
 The production container runs Python 3.12 as a non-root user, applies all pending migrations with five bounded attempts for temporary PostgreSQL startup failures, then binds Uvicorn to `0.0.0.0:$PORT`. It disables reload, honors forwarded proxy headers, logs to stdout/stderr, and checks the dynamically assigned port. Migration errors remain visible and prevent the server from starting after the retry limit. `APP_ENV=production` validates that a non-local `DATABASE_URL` and `API_KEY` are configured before startup. Database health failures return HTTP 503 without exposing connection details.
 
 Local production-image verification:
