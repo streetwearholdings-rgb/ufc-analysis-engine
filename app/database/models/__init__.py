@@ -1,3 +1,4 @@
+from app.database.models.analysis import AnalysisRun, FightAnalysis
 from app.database.models.context import (
     ContextAdjustment,
     ContextDocument,
@@ -24,6 +25,7 @@ from app.database.models.odds_provider_event import OddsProviderEvent
 from app.database.models.odds_snapshot import OddsSnapshot
 
 __all__ = [
+    "AnalysisRun",
     "Event",
     "ContextAdjustment",
     "ContextDocument",
@@ -34,6 +36,7 @@ __all__ = [
     "ContextSource",
     "FighterAlias",
     "Fight",
+    "FightAnalysis",
     "FightPerformanceScore",
     "FightRoundStat",
     "FightTrainingRecord",

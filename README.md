@@ -51,6 +51,10 @@ Supabase users should set `DATABASE_URL` to its PostgreSQL SQLAlchemy URL. `SUPA
 | `ODDS_API_STALE_AFTER_MINUTES` | Maximum bookmaker update age for fresh market reads |
 | `ODDS_API_LOW_QUOTA_WARNING` | Remaining-request threshold for warning logs |
 | `ODDS_EVENT_MATCH_TOLERANCE_HOURS` | Provider/internal event-date matching tolerance |
+| `MIN_FEATURE_QUALITY`, `MIN_CONFIDENCE_SCORE` | Minimum evidence quality and confidence required for recommendations; defaults `0.60` |
+| `MIN_VALUE_EDGE`, `MIN_EXPECTED_VALUE` | Minimum no-vig probability edge (`0.03`) and expected value (`0.02`) |
+| `MAX_ODDS_AGE_MINUTES` | Maximum odds age accepted by analysis; default `60` |
+| `MIN_RECOMMENDED_ODDS`, `MAX_RECOMMENDED_ODDS` | Recommendation price range; defaults `1.20` through `5.00` |
 | `CONTEXT_ENGINE_ENABLED` | Enables the optional reviewed-context adjustment layer |
 | `CONTEXT_MAX_INDIVIDUAL_ADJUSTMENT` | Per-signal probability-adjustment cap; default `0.02` |
 | `CONTEXT_MAX_CATEGORY_ADJUSTMENT` | Per-category cap; default `0.03` |
@@ -182,6 +186,30 @@ The same workflow is available through protected administration routes:
 Both routes require the server-side `API_KEY` in the `X-API-Key` header and never return provider credentials. Only one run can execute at a time. In Swagger (`/docs`), use **Authorize** to set `X-API-Key`, invoke the POST, then inspect the status route. Verify population with `GET /api/v1/events/upcoming?limit=5`. Confirm odds freshness from the POST/status counts and the persisted `bookmaker_last_update` values returned with fight analysis.
 
 Current limitations: The Odds API exposes upcoming bouts rather than official UFC card metadata; cards are grouped by UTC date. Ingestion is moneyline only, and Render free tier has no repository-defined scheduler. Run the CLI externally or invoke the protected endpoint at the desired cadence.
+
+## Production upcoming-fight analysis
+
+The production predictor is **not a deployed trained ML model**. The repository contains logistic-regression training code, but no trained artifact is loaded by the API. Production analysis therefore uses the statistical Elo expected-score transform for the base win probability, deterministic rating/style matchup comparisons for explanations and confidence, and only approved context signals for bounded adjustments. Outputs identify themselves as `statistical_elo_with_deterministic_features`, use the configured `MODEL_VERSION`, and report `calibration_status: uncalibrated`. They must not be interpreted as calibrated forecasting probabilities.
+
+Eligibility requires both fighters to have persisted ratings, style scores, and rolling statistics. Inputs include overall/striking/wrestling/submission/defensive ratings, opponent-adjusted performance/recent form, sample size, striking and takedown rates/accuracy/defence, control, submission attempts, durability, cardio, finish/decision rates, physical fighter metadata where present, and reviewed fight context. Missing inputs are never replaced with invented production values: the fight is stored as `insufficient_data` with null prediction fields. Missing/stale odds, low quality/confidence, pending context review, weak edge/EV, or out-of-range prices produce `no_bet`.
+
+Run the shared service layer locally with:
+
+```bash
+alembic upgrade head
+python -m app.cli.run_upcoming_analysis
+```
+
+On Render free tier, open `/docs`, click **Authorize**, enter the server `API_KEY` as `X-API-Key`, and call `POST /api/v1/admin/analysis/run-upcoming` with `{}`. To target one card or refresh current results, send `{"event_id":"...","force":true}`. Inspect `GET /api/v1/admin/analysis/status` and `GET /api/v1/model/status` afterward. No background worker, shell, cron, or startup-time analysis is required.
+
+Base44 read routes are:
+
+- `GET /api/v1/analysis/upcoming`: paginated current analyses; supports event, confidence, edge, and status filters.
+- `GET /api/v1/analysis/fights/{fight_id}`: full current fight analysis.
+- `GET /api/v1/picks/upcoming`: recommended moneyline picks by default; supports event, market, tier, EV, and no-bet filters.
+- `GET /api/v1/model/status`: model identity, calibration, latest run, analysis coverage, and data/odds freshness.
+
+Analysis records contain stable fighter/event references, winner and opponent probabilities, raw and no-vig market probabilities, decimal odds, edge, expected value, confidence/quality tiers, risk, recommendation state, rationale, advantages, risks, warnings, model metadata, and timestamps. Edge is `model_probability - no_vig_market_probability`; expected value is `model_probability × decimal_odds - 1`. These outputs are decision-support estimates, not guarantees or financial advice. Never stake funds that cannot be lost, and independently verify prices and fighter information.
 
 ## Phase 5 Context Engine
 

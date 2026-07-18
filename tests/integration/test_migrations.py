@@ -19,7 +19,7 @@ def alembic_config(database_url: str) -> Config:
 def test_alembic_has_exactly_one_head() -> None:
     heads = ScriptDirectory.from_config(alembic_config("sqlite://")).get_heads()
 
-    assert heads == ["20260718_0006"]
+    assert heads == ["20260718_0007"]
 
 
 def test_migrations_create_every_model_table(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:

@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.api.analysis import router as analysis_router
 from app.api.calculations import router as calculations_router
 from app.api.context import admin_router as context_admin_router
 from app.api.context import router as context_router
@@ -48,6 +49,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(health_router)
+app.include_router(analysis_router)
 app.include_router(ingestion_router)
 app.include_router(calculations_router)
 app.include_router(fighters_router)

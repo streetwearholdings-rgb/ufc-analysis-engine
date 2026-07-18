@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     odds_api_low_quota_warning: int = Field(default=100, ge=0)
     odds_api_sport_key: str | None = None
     odds_event_match_tolerance_hours: PositiveFloat = 24
+    min_feature_quality: float = Field(default=0.60, ge=0, le=1)
+    min_confidence_score: float = Field(default=0.60, ge=0, le=1)
+    min_value_edge: float = Field(default=0.03, ge=0, le=1)
+    min_expected_value: float = Field(default=0.02, ge=0)
+    max_odds_age_minutes: int = Field(default=60, ge=1)
+    max_recommended_odds: float = Field(default=5.00, gt=1)
+    min_recommended_odds: float = Field(default=1.20, gt=1)
     context_engine_enabled: bool = True
     context_max_individual_adjustment: float = Field(default=0.02, ge=0, le=1)
     context_max_category_adjustment: float = Field(default=0.03, ge=0, le=1)
@@ -83,6 +90,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_context_caps(self) -> "Settings":
+        if self.min_recommended_odds > self.max_recommended_odds:
+            raise ValueError("MIN_RECOMMENDED_ODDS cannot exceed MAX_RECOMMENDED_ODDS")
         if self.context_max_individual_adjustment > self.context_max_category_adjustment:
             raise ValueError("CONTEXT_MAX_INDIVIDUAL_ADJUSTMENT cannot exceed the category cap")
         if self.context_max_category_adjustment > self.context_max_total_adjustment:
