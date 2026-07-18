@@ -15,8 +15,8 @@ class FighterSummary(BaseModel):
 class FightSummary(BaseModel):
     fight_id: UUID
     event_id: UUID
-    weight_class: str
-    scheduled_rounds: int
+    weight_class: str | None
+    scheduled_rounds: int | None
     status: str
     fighter_a: FighterSummary
     fighter_b: FighterSummary

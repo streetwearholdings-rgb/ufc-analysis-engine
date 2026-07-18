@@ -49,6 +49,7 @@ def test_render_database_url_cors_alias_and_production_validation(monkeypatch: p
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("DATABASE_URL", "postgres://render:secret@host/database")
     monkeypatch.setenv("API_KEY", "admin-secret")
+    monkeypatch.setenv("ODDS_API_KEY", "odds-secret")
     monkeypatch.setenv("CORS_ORIGINS", "https://example.test,https://admin.example.test")
     settings = Settings(_env_file=None)
     assert settings.database_url == "postgresql+psycopg2://render:secret@host/database"
@@ -58,7 +59,12 @@ def test_render_database_url_cors_alias_and_production_validation(monkeypatch: p
     with pytest.raises(ValidationError, match="DATABASE_URL"):
         Settings(_env_file=None, app_env="production", api_key="secret")
     with pytest.raises(ValidationError, match="API_KEY"):
-        Settings(_env_file=None, app_env="production", database_url="postgresql://user:pass@host/db")
+        Settings(
+            _env_file=None,
+            app_env="production",
+            database_url="postgresql://user:pass@host/db",
+            odds_api_key="odds-secret",
+        )
 
 
 def test_client_discovers_once_parses_quota_and_skips_bad_outcome() -> None:

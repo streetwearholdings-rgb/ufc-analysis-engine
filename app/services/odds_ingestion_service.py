@@ -61,7 +61,7 @@ class OddsIngestionService:
                         internal_fight_id=matched.internal_fight_id,
                         match_status=matched.status,
                     )
-                for snapshot in _normalise_event(event, matched, started):
+                for snapshot in normalise_event(event, matched, started):
                     counters["bookmaker_markets_processed"] += 1
                     if dry_run:
                         continue
@@ -95,7 +95,7 @@ def _load_candidates(session: Session) -> list[tuple[Fight, Event, Fighter, Figh
     ).tuples())
 
 
-def _normalise_event(
+def normalise_event(
     event: ProviderEvent, matched: MatchResult, captured_at: datetime
 ) -> list[NormalisedOddsSnapshot]:
     selection_ids = {

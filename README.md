@@ -145,7 +145,7 @@ python -m scripts.phase3 evaluate --include-mirrored-rows
 
 Use `--start-date`, `--end-date`, repeated `--weight-class`, and `--min-data-quality` filters to select a cohort. Destructive rebuilds require the explicit `--reset` flag. Training uses chronological train/validation/test partitions; preprocessing fits on training data and optional probability calibration fits on validation data.
 
-## Phase 4A moneyline odds
+## Production upcoming UFC ingestion and moneyline odds
 
 Phase 4A integrates The Odds API v4 `h2h` market using decimal prices. Obtain a key from The Odds API account portal and set it only in the server environment:
 
@@ -155,7 +155,12 @@ cp .env.example .env
 alembic upgrade head
 python -m scripts.odds ingest --dry-run
 python -m scripts.odds ingest
+python -m app.cli.ingest_upcoming
 ```
+
+`python -m app.cli.ingest_upcoming` is the production population command. It fetches upcoming UFC/MMA bouts from The Odds API, groups source bouts into UTC-date provider cards, idempotently upserts events, fighters, and fights, and stores all available moneyline snapshots in one transaction. The provider does not supply official card titles, venues, weight classes, or scheduled-round counts, so those unavailable values are left transparent or null rather than fabricated. Repeated runs update the same source IDs and skip identical odds snapshots.
+
+The production command requires `DATABASE_URL` and `ODDS_API_KEY`. Production API deployments also require `API_KEY`; `ODDS_API_BASE_URL` defaults to the official The Odds API base URL and should normally remain unchanged. `ODDS_API_SPORT_KEY` is optional and otherwise discovered with `mma_ufc` preferred over a generic MMA feed. Set it explicitly when the provider account exposes a dedicated UFC key. Provider timeouts, transient failures, and rate limits use the bounded `ODDS_API_MAX_RETRIES` policy; `Retry-After` is honored up to 30 seconds.
 
 Dry-run performs sport discovery, one upcoming-odds request, validation, matching, and normalisation without database writes. Set `ODDS_API_SPORT_KEY` to a known active MMA key to avoid the discovery request. The client reads quota headers from normal responses, includes them in the summary, and warns below `ODDS_API_LOW_QUOTA_WARNING`; it never makes a quota-only request.
 
@@ -169,7 +174,14 @@ Matching normalises case, spacing, punctuation, quoted nicknames, accents, apost
 
 The `OddsMarketService` is the provider-independent analysis-engine read boundary. It returns the best current decimal price per fighter, raw implied probability, bookmaker update time, age, and bookmaker count. It does not produce betting recommendations.
 
-Current limitations: moneyline only; no aliases or fuzzy matching; the source event entity stores a date rather than an exact scheduled timestamp, so matching precision is date-based; no automatic polling or rematching job; and no public odds API route. Operational scheduling should invoke the CLI at an externally controlled cadence.
+The same workflow is available through protected administration routes:
+
+- `POST /api/v1/admin/ingest/upcoming` runs ingestion and returns event, fight, fighter, and odds counts.
+- `GET /api/v1/admin/ingestion/status` returns the last success, last failure, safe summary, and processed counts.
+
+Both routes require the server-side `API_KEY` in the `X-API-Key` header and never return provider credentials. Only one run can execute at a time. In Swagger (`/docs`), use **Authorize** to set `X-API-Key`, invoke the POST, then inspect the status route. Verify population with `GET /api/v1/events/upcoming?limit=5`. Confirm odds freshness from the POST/status counts and the persisted `bookmaker_last_update` values returned with fight analysis.
+
+Current limitations: The Odds API exposes upcoming bouts rather than official UFC card metadata; cards are grouped by UTC date. Ingestion is moneyline only, and Render free tier has no repository-defined scheduler. Run the CLI externally or invoke the protected endpoint at the desired cadence.
 
 ## Phase 5 Context Engine
 
@@ -233,12 +245,13 @@ The root [Render Blueprint](render.yaml) creates the `ufc-analysis-api` Docker w
 4. Provide the Blueprint's secret values:
    - `API_KEY`: a long random value required by protected administration routes.
    - `CORS_ORIGINS`: a JSON array or comma-separated list of allowed browser origins, such as `https://app.example.com`.
-   - `ODDS_API_KEY`: required only when live odds ingestion is used.
+   - `ODDS_API_KEY`: required for production startup and upcoming UFC ingestion.
 5. Apply the Blueprint and deploy. Automatic deployments track `main`.
 6. Allow Render to redeploy after the changes reach GitHub. The free-tier-compatible container startup script runs `alembic upgrade head` automatically before Uvicorn; no Render Shell or paid pre-deploy command is required. Confirm the deploy logs contain `Applying database migrations`, the Alembic revision upgrades, and `Database migrations completed successfully`.
 7. Verify `https://YOUR-SERVICE.onrender.com/health` returns `{"status":"ok","database":"ok"}`.
 8. Open `https://YOUR-SERVICE.onrender.com/docs` and test the endpoint that previously failed. Database exceptions now return a stable `database_error` response without exposing connection details.
 9. Verify OpenAPI is available at `https://YOUR-SERVICE.onrender.com/openapi.json`.
+10. In `/docs`, authorize with `X-API-Key`, run `POST /api/v1/admin/ingest/upcoming`, and confirm non-zero counts. Check `GET /api/v1/admin/ingestion/status`, then verify `/api/v1/events/upcoming?limit=5`.
 
 If the Render service was previously given a **Docker Command** override, clear that field completely before redeploying. Render must use the image command, `CMD ["/app/start.sh"]`; do not paste a quoted `alembic ... && uvicorn ...` command into the override field.
 

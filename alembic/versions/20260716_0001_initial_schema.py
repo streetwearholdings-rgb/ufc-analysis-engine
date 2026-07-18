@@ -24,6 +24,7 @@ LATER_PHASE_TABLES = {
     "context_feature_values",
     "context_adjustments",
     "fighter_aliases",
+    "ingestion_runs",
 }
 
 

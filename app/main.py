@@ -11,6 +11,7 @@ from app.api.context import router as context_router
 from app.api.events import router as events_router
 from app.api.fighters import router as fighters_router
 from app.api.health import router as health_router
+from app.api.ingestion import router as ingestion_router
 from app.api.matchups import router as matchups_router
 from app.config import get_settings
 
@@ -47,6 +48,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(health_router)
+app.include_router(ingestion_router)
 app.include_router(calculations_router)
 app.include_router(fighters_router)
 app.include_router(matchups_router)

@@ -92,6 +92,8 @@ class Settings(BaseSettings):
                 raise ValueError("DATABASE_URL must be explicitly configured for production")
             if not self.api_key:
                 raise ValueError("API_KEY is required in production")
+            if not self.odds_api_key:
+                raise ValueError("ODDS_API_KEY is required in production for upcoming UFC ingestion")
         return self
 
 

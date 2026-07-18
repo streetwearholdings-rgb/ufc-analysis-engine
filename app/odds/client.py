@@ -18,7 +18,7 @@ from app.utils.logging import log_event
 
 logger = logging.getLogger(__name__)
 RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
-RECOGNISED_SPORT_KEYS = ("mma_mixed_martial_arts", "mma_ufc")
+RECOGNISED_SPORT_KEYS = ("mma_ufc", "mma_mixed_martial_arts")
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,7 +98,7 @@ class OddsApiClient:
                     raise OddsProviderAuthenticationError("The Odds API rejected the configured credentials")
                 if response.status_code in RETRYABLE_STATUSES:
                     if attempt + 1 < attempts:
-                        time.sleep(2**attempt)
+                        time.sleep(_retry_delay(response, attempt))
                         continue
                     if response.status_code == 429:
                         raise OddsProviderRateLimitError("The Odds API rate limit was exceeded")
@@ -138,6 +138,14 @@ def _header_int(response: httpx.Response, name: str) -> int | None:
         return int(value) if value is not None else None
     except ValueError:
         return None
+
+
+def _retry_delay(response: httpx.Response, attempt: int) -> float:
+    retry_after = response.headers.get("retry-after")
+    try:
+        return min(max(float(retry_after), 0), 30) if retry_after is not None else float(2**attempt)
+    except ValueError:
+        return float(2**attempt)
 
 
 def _parse_event(payload: object) -> tuple[ProviderEvent, int]:
